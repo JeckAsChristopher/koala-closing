@@ -1,0 +1,19 @@
+{
+  "obfuscationLevel":   "high",
+  "includeTests":       false,
+  "injectJunkFiles":    true,
+  "junkFileCount":      3,
+  "outputSuffix":       "_obfuscated",
+  "chunkFolders":       3,
+  "restoreEnabled":     false,
+  "logFile":            "koala.audit.log",
+  "excludePatterns":    [
+    "node_modules",
+    ".git",
+    "*.test.js",
+    "*.spec.js",
+    "*.license",
+    "koala.config.json",
+    "koala.audit.log"
+  ]
+}

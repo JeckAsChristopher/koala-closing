@@ -1,0 +1,9 @@
+node_modules/
+build/
+*.log
+koala.audit.log
+*_obfuscated/
+*_restored/
+.koala_restore.enc
+.koala_manifest.json
+*.license

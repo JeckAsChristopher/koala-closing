@@ -1,0 +1,36 @@
+{
+  "name": "koala-closing",
+  "version": "1.0.0",
+  "description": "Professional Node.js project licensing, encryption, and obfuscation tool",
+  "main": "src/cli.js",
+  "bin": {
+    "koala-closing": "./bin/koala-closing.js"
+  },
+  "scripts": {
+    "install": "node-gyp rebuild || echo '[koala-closing] Native addon build failed — falling back to pure-JS mode'",
+    "build": "node-gyp rebuild",
+    "test": "node tests/cli.test.js"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "inquirer": "^8.2.6",
+    "javascript-obfuscator": "^4.1.1",
+    "chalk": "^4.1.2",
+    "fs-extra": "^11.2.0",
+    "glob": "^10.3.10",
+    "archiver": "^6.0.1",
+    "node-addon-api": "^7.1.0",
+    "uuid": "^9.0.1",
+    "ora": "^5.4.1",
+    "table": "^6.8.1"
+  },
+  "devDependencies": {
+    "node-gyp": "^10.1.0"
+  },
+  "gypfile": true,
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": ["obfuscator", "licensing", "cli", "protection", "encryption"],
+  "license": "PROPRIETARY"
+}
