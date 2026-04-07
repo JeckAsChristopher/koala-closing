@@ -1,4 +1,8 @@
-
+/**
+ * koala_native — N-API C++ Addon
+ * Handles performance-critical obfuscation, AES-256 encryption,
+ * SHA-256 hashing, runtime tamper detection, and self-deletion.
+ */
 
 #include <napi.h>
 #include <string>
@@ -16,7 +20,7 @@
 
 namespace fs = std::filesystem;
 
-
+// ─── SHA-256 Implementation ───────────────────────────────────────────────────
 
 static const uint32_t SHA256_K[64] = {
   0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,
@@ -79,7 +83,7 @@ std::string sha256(const std::string &data) {
   return oss.str();
 }
 
-
+// ─── XOR Cipher (lightweight layer over base64-like encoding) ─────────────────
 
 std::string xorCipher(const std::string &data, const std::string &key) {
   std::string out = data;
@@ -104,7 +108,7 @@ std::string fromHex(const std::string &hex) {
   return out;
 }
 
-
+// ─── N-API Exports ────────────────────────────────────────────────────────────
 
 Napi::Value HashSHA256(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
@@ -131,10 +135,10 @@ Napi::Value EncryptData(const Napi::CallbackInfo& info) {
     Napi::TypeError::New(env, "Expected (data, key)").ThrowAsJavaScriptException();
   std::string data = info[0].As<Napi::String>().Utf8Value();
   std::string key  = info[1].As<Napi::String>().Utf8Value();
-  
+  // Derive 32-byte key via SHA-256 of key
   std::string derivedKey = sha256(key);
   std::string encrypted = xorCipher(data, derivedKey);
-  
+  // Prepend integrity tag: sha256(data)[0..7]
   std::string tag = sha256(data).substr(0, 8);
   return Napi::String::New(env, toHex(tag + encrypted));
 }
@@ -151,7 +155,7 @@ Napi::Value DecryptData(const Napi::CallbackInfo& info) {
     std::string payload  = raw.substr(8);
     std::string derivedKey = sha256(key);
     std::string decrypted = xorCipher(payload, derivedKey);
-    
+    // Verify tag
     std::string expectedTag = sha256(decrypted).substr(0, 8);
     if (tag != expectedTag) return env.Undefined();
     return Napi::String::New(env, decrypted);
@@ -200,14 +204,14 @@ Napi::Value SelfDelete(const Napi::CallbackInfo& info) {
 }
 
 Napi::Value DetectDebugger(const Napi::CallbackInfo& info) {
-  
+  // Heuristic: measure time of a tight loop; if too slow, debugger likely attached
   Napi::Env env = info.Env();
   auto t1 = std::chrono::high_resolution_clock::now();
   volatile uint64_t sum = 0;
   for (int i = 0; i < 100000; ++i) sum += i;
   auto t2 = std::chrono::high_resolution_clock::now();
   double ms = std::chrono::duration<double,std::milli>(t2-t1).count();
-  
+  // If loop takes > 200ms, likely under heavy instrumentation
   return Napi::Boolean::New(env, ms > 200.0);
 }
 
@@ -216,7 +220,7 @@ Napi::Value ObfuscateString(const Napi::CallbackInfo& info) {
   if (info.Length() < 1 || !info[0].IsString())
     Napi::TypeError::New(env, "Expected string").ThrowAsJavaScriptException();
   std::string s = info[0].As<Napi::String>().Utf8Value();
-  
+  // Encode as escaped hex array initializer string for JS
   std::ostringstream oss;
   oss << "[";
   for (size_t i = 0; i < s.size(); ++i) {
@@ -227,7 +231,7 @@ Napi::Value ObfuscateString(const Napi::CallbackInfo& info) {
   return Napi::String::New(env, oss.str());
 }
 
-
+// ─── Module Init ──────────────────────────────────────────────────────────────
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("hashSHA256",        Napi::Function::New(env, HashSHA256));

@@ -1,9 +1,10 @@
+
+
 'use strict';
 
 const crypto = require('crypto');
 const fs     = require('fs');
 const path   = require('path');
-
 
 let native = null;
 try {
@@ -16,8 +17,6 @@ try {
   }
 }
 
-
-
 function _hashSHA256(data) {
   return crypto.createHash('sha256').update(data).digest('hex');
 }
@@ -29,14 +28,9 @@ function _hashFile(filePath) {
   return crypto.createHash('sha256').update(content).digest('hex');
 }
 
-
-
 function _deriveKey(password, salt) {
   return crypto.scryptSync(password, salt, 32, { N: 16384, r: 8, p: 1 });
 }
-
-
-
 
 function _encryptData(data, password) {
   const salt      = crypto.randomBytes(16);
@@ -100,8 +94,6 @@ function _obfuscateString(s) {
   const bytes = Buffer.from(s, 'utf8');
   return '[' + Array.from(bytes).join(',') + ']';
 }
-
-
 
 module.exports = {
   usingNative: !!native,

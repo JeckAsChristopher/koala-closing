@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-/**
- * example_project/index.js
- * A minimal Node.js CLI used to demonstrate Koala-Closing.
- */
 
 'use strict';
 

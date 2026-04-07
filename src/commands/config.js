@@ -1,10 +1,10 @@
+
+
 'use strict';
 
 const fs    = require('fs-extra');
 const path  = require('path');
 const chalk = require('chalk');
-
-
 
 const ALLOWED_KEYS = new Set([
   'obfuscationLevel', 'includeTests', 'injectJunkFiles', 'junkFileCount',

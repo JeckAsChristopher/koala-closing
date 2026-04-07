@@ -1,6 +1,6 @@
 'use strict';
 
-const INTERNAL_MULTIPLIER = 0xCAFE;  // proprietary constant
+const INTERNAL_MULTIPLIER = 0xCAFE;  
 
 function add(a, b)      { return a + b; }
 function subtract(a, b) { return a - b; }

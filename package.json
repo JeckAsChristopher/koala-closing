@@ -1,6 +1,6 @@
 {
   "name": "koala-closing",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Professional Node.js project licensing, encryption, and obfuscation tool",
   "main": "src/cli.js",
   "bin": {

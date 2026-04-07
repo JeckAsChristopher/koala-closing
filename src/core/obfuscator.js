@@ -1,11 +1,11 @@
+
+
 'use strict';
 
 const JavaScriptObfuscator = require('javascript-obfuscator');
 const { wrapInDecryptionEnvelope } = require('./encryption');
 const { injectDecoyVars }          = require('./junk-injector');
 const native                        = require('./native-bridge');
-
-
 
 function stripComments(src) {
   let out = '';
@@ -52,7 +52,6 @@ function stripComments(src) {
   return out;
 }
 
-
 function collapseToOneLine(src) {
   return src
     .replace(/\r\n|\r|\n/g, ' ')   
@@ -60,7 +59,6 @@ function collapseToOneLine(src) {
     .replace(/\s*([{};,=+\-*/%&|^~<>!?:()\[\]])\s*/g, '$1') 
     .trim();
 }
-
 
 const OBFUSCATION_PRESETS = {
   high: {
@@ -144,7 +142,6 @@ const OBFUSCATION_PRESETS = {
   }
 };
 
-
 const SECOND_PASS_OPTS = {
   target:                         'node',
   compact:                        true,
@@ -197,7 +194,6 @@ function obfuscateSource(source, level = 'high', seed = null) {
   return pass1;
 }
 
-
 function protectFile(source, password, level = 'high') {
   const stripped    = stripComments(source);
   const withDecoys  = injectDecoyVars(stripped);
@@ -215,4 +211,3 @@ function randomFolderName() {
 }
 
 module.exports = { obfuscateSource, protectFile, stripComments, collapseToOneLine, randomFileName, randomFolderName };
-

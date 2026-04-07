@@ -6,12 +6,12 @@ const inquirer = require('inquirer');
 const chalk    = require('chalk');
 const ora      = require('ora');
 
-const { protectFile, randomFolderName, randomFileName } = require('../core/obfuscator');
-const { buildManifest, buildAntitamperSnippet }         = require('../core/integrity');
-const { buildJunkFile }                                  = require('../core/junk-injector');
-const { findLicenseFile, verifyLicense }                 = require('../core/license');
-const { encrypt }                                        = require('../core/encryption');
-const native                                             = require('../core/native-bridge');
+const { protectFile, obfuscateSource, randomFolderName, randomFileName } = require('../core/obfuscator');
+const { buildManifest, buildAntitamperSnippet }  = require('../core/integrity');
+const { buildJunkFile }                           = require('../core/junk-injector');
+const { findLicenseFile, verifyLicense }          = require('../core/license');
+const { encrypt }                                 = require('../core/encryption');
+const native                                      = require('../core/native-bridge');
 
 function loadConfig(projectPath) {
   const cfgPath  = path.join(projectPath, 'koala.config.json');
@@ -70,14 +70,65 @@ function buildOutputPackageJson(originalPkg, entryMap) {
 
 function appendAuditLog(projectPath, config, message) {
   try {
-    
-    
-    const logName = path.basename(config.logFile || 'koala.audit.log');
-    const logPath = path.join(projectPath, logName);
-    
+    const logName   = path.basename(config.logFile || 'koala.audit.log');
+    const logPath   = path.join(projectPath, logName);
     const sanitized = message.replace(/[\r\n]/g, ' ');
     fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${sanitized}\n`);
   } catch (_) {}
+}
+
+function buildObfuscatedProxy(entryPoint, password, level) {
+  
+  
+  const proxySource = `
+'use strict';
+(function(){
+  var _fs   = require('fs');
+  var _path = require('path');
+  var _cryp = require('crypto');
+
+  var _root = __dirname;
+  var _files;
+  try { _files = _fs.readdirSync(_root); } catch(_){ return; }
+  var _lf = null;
+  for (var _i = 0; _i < _files.length; _i++) {
+    if (_files[_i].slice(-8) === '.license') { _lf = _path.join(_root, _files[_i]); break; }
+  }
+  if (!_lf) return;
+
+  var _lc;
+  try { _lc = _fs.readFileSync(_lf); } catch(_){ return; }
+  if (!_lc || !_lc.length) return;
+  var _lh = _cryp.createHash('sha256').update(_lc).digest('hex');
+
+  var _mp = _path.join(_root, '.koala_manifest.json');
+  var _me;
+  try { _me = JSON.parse(_fs.readFileSync(_mp, 'utf8')); } catch(_){ return; }
+  if (!_me || _me.v !== 2 || !_me.data) return;
+
+  var _md = (function(blob, key) {
+    try {
+      var p = blob.split(':');
+      if (p.length !== 4) return null;
+      var _ek = _cryp.scryptSync(key, Buffer.from(p[0],'hex'), 32, {N:16384,r:8,p:1});
+      var _dc = _cryp.createDecipheriv('aes-256-gcm', _ek, Buffer.from(p[1],'hex'));
+      _dc.setAuthTag(Buffer.from(p[2],'hex'));
+      var out = Buffer.concat([_dc.update(Buffer.from(p[3],'hex')), _dc.final()]).toString('utf8');
+      return JSON.parse(out);
+    } catch(_) { return null; }
+  })(_me.data, _lh);
+
+  if (!_md || !_md.files) return;
+
+  if (_md.licenseHash !== _lh) return;
+
+  var _ep = require(${JSON.stringify(entryPoint)});
+  if (typeof _ep !== 'undefined') module.exports = _ep;
+})();
+`.trim();
+
+  
+  return protectFile(proxySource, password, level);
 }
 
 async function buildCommand(projectPath) {
@@ -134,10 +185,10 @@ async function buildCommand(projectPath) {
     const { fullPath, relPath } = sourceFiles[i];
     spinner.text = `obfuscating ${relPath}`;
 
-    const source    = fs.readFileSync(fullPath, 'utf8');
-    const obfName   = randomFileName('.js');
-    const folder    = folderNames[i % numFolders];
-    const outFile   = path.join(outputDir, folder, obfName);
+    const source  = fs.readFileSync(fullPath, 'utf8');
+    const obfName = randomFileName('.js');
+    const folder  = folderNames[i % numFolders];
+    const outFile = path.join(outputDir, folder, obfName);
 
     let protected_src;
     try {
@@ -147,8 +198,10 @@ async function buildCommand(projectPath) {
       protected_src = collapseToOneLine(stripComments(source));
     }
 
+    
+    const outRelPath = folder + '/' + obfName;
     const antitamper = buildAntitamperSnippet(
-      path.join(folder, obfName), '', '../.koala_manifest.json'
+      outRelPath, '', '../.koala_manifest.json'
     );
     fs.writeFileSync(outFile, antitamper + '\n' + protected_src, 'utf8');
     fileMap[relPath] = { folder, obfName, originalHash: native.hashFile(fullPath) };
@@ -171,27 +224,17 @@ async function buildCommand(projectPath) {
   fs.copyFileSync(licenseFile, path.join(outputDir, path.basename(licenseFile)));
 
   
-  spinner.text = 'generating proxy index.js';
-  const mainEntry  = fileMap['index.js'] || Object.values(fileMap)[0];
-  const entryPoint = mainEntry ? `./${mainEntry.folder}/${mainEntry.obfName}` : null;
-  if (entryPoint) {
-    const proxyIndex = `'use strict';module.exports=require(${JSON.stringify(entryPoint)});`;
-    fs.writeFileSync(path.join(outputDir, 'index.js'), proxyIndex, 'utf8');
-  }
-
   spinner.text = 'building manifest';
-  const manifest = buildManifest(outputDir);
-
-  
-  const licenseContent = fs.readFileSync(licenseFile, 'utf8');
-  const licenseHash    = native.hashSHA256(licenseContent);
+  const sourceManifest  = buildManifest(outputDir);
+  const licenseContent  = fs.readFileSync(licenseFile, 'utf8');
+  const licenseHash     = native.hashSHA256(licenseContent);
 
   const manifestData = {
     buildTime:   new Date().toISOString(),
     projectName: pkg.name || path.basename(absPath),
     owner:       licResult.owner,
     licenseHash,
-    files:       manifest,
+    files:       sourceManifest,
     fileMap
   };
 
@@ -200,6 +243,24 @@ async function buildCommand(projectPath) {
     path.join(outputDir, '.koala_manifest.json'),
     JSON.stringify({ v: 2, data: encManifest }, null, 2)
   );
+
+  
+  spinner.text = 'generating obfuscated proxy index.js';
+  const mainEntry  = fileMap['index.js'] || Object.values(fileMap)[0];
+  if (mainEntry) {
+    const entryPoint = `./${mainEntry.folder}/${mainEntry.obfName}`;
+    const obfLevel   = config.obfuscationLevel || 'high';
+    let   proxyCode;
+
+    try {
+      proxyCode = buildObfuscatedProxy(entryPoint, password, obfLevel);
+    } catch (_) {
+      
+      proxyCode = `(function(){var _f=require('fs'),_p=require('path');var _lf=_f.readdirSync(__dirname).find(function(n){return n.slice(-8)==='.license';});if(!_lf)return;module.exports=require(${JSON.stringify(entryPoint)});})();`;
+    }
+
+    fs.writeFileSync(path.join(outputDir, 'index.js'), proxyCode, 'utf8');
+  }
 
   if (config.restoreEnabled) {
     console.log(chalk.yellow.bold(
@@ -228,7 +289,7 @@ async function buildCommand(projectPath) {
   spinner.succeed('build complete');
   console.log('');
   console.log(chalk.green('protected project:'), chalk.bold(outputDir));
-  console.log(chalk.dim(`${sourceFiles.length} file(s) | ${numFolders} folder(s) | proxy index.js included in manifest`));
+  console.log(chalk.dim(`${sourceFiles.length} file(s) | ${numFolders} folder(s) | obfuscated+license-guarded index.js`));
 
   appendAuditLog(absPath, config,
     `build output="${outputDir}" files=${sourceFiles.length} owner="${licResult.owner}"`

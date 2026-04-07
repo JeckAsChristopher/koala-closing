@@ -1,9 +1,10 @@
+
+
 'use strict';
 
 const { program } = require('commander');
 const chalk       = require('chalk');
 const pkg         = require('../package.json');
-
 
 const cmds = {
   init:            () => require('./commands/init'),
@@ -14,8 +15,6 @@ const cmds = {
   clean:           () => require('./commands/clean'),
   'generate-license': () => require('./commands/generate-license')
 };
-
-
 
 function printBanner() {
   console.log('');
@@ -29,8 +28,6 @@ function printBanner() {
   console.log(chalk.bold('  Koala-Closing') + chalk.dim(' v' + pkg.version) + chalk.dim(' -- Node.js Licensing & Obfuscation'));
   console.log('');
 }
-
-
 
 program
   .name('koala-closing')
@@ -87,8 +84,6 @@ program
   .action(async (projectPath) => {
     await cmds.clean()(projectPath);
   });
-
-
 
 program.on('command:*', (operands) => {
   console.error(chalk.red(`[error]  Unknown command: ${operands[0]}`));

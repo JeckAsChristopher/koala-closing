@@ -1,7 +1,8 @@
+
+
 'use strict';
 
 const native = require('./native-bridge');
-
 
 const JUNK_TEMPLATES = [
   (n) => `function ${n}(){var _x=Math.random()*1e6|0;for(var _i=0;_i<_x%17;_i++){_x^=_i<<3;}_x&=0xFFFF;return _x;}`,
@@ -19,7 +20,6 @@ const JUNK_EXPORTS = [
   (n) => `exports.${n}=${n};`,
 ];
 
-
 function generateJunkBlock(count = 5) {
   const lines = [];
   for (let i = 0; i < count; i++) {
@@ -34,7 +34,6 @@ function generateJunkBlock(count = 5) {
   return lines.join('\n');
 }
 
-
 function injectDecoyVars(source) {
   const vars = [];
   for (let i = 0; i < 4; i++) {
@@ -44,7 +43,6 @@ function injectDecoyVars(source) {
   }
   return vars.join('') + source;
 }
-
 
 function buildJunkFile() {
   return generateJunkBlock(8 + Math.floor(Math.random() * 6));

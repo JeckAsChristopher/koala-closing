@@ -1,19 +1,11 @@
-/**
- * tests/cli.test.js
- * Integration tests for Koala-Closing core modules (no network, no build required).
- * Run with: node tests/cli.test.js
- */
+
 
 'use strict';
 
 const path   = require('path');
-const assert = (cond, msg) => { if (!cond) throw new Error('✖ FAIL: ' + msg); };
+const assert = (cond, msg) => { if (!cond) throw new Error('[fail] FAIL: ' + msg); };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function pass(msg) { console.log('  ✔ ' + msg); }
-
-// ─── native-bridge ────────────────────────────────────────────────────────────
+function pass(msg) { console.log('  [ok] ' + msg); }
 
 console.log('\n[1/5] native-bridge');
 const nb = require('../src/core/native-bridge');
@@ -31,12 +23,10 @@ const obs = nb.obfuscateString('ABC');
 assert(obs === '[65,66,67]', 'obfuscateString("ABC")');
 pass('obfuscateString correct');
 
-// ─── encryption ───────────────────────────────────────────────────────────────
-
 console.log('\n[2/5] encryption');
 const { encrypt, decrypt, wrapInDecryptionEnvelope } = require('../src/core/encryption');
 
-const plaintext = 'Hello, Koala! 🐨 Secret payload.';
+const plaintext = 'Hello, Koala!  Secret payload.';
 const password  = 'StrongPass123!';
 const ct        = encrypt(plaintext, password);
 assert(typeof ct === 'string' && ct.length > 0, 'encrypt returns string');
@@ -51,10 +41,8 @@ assert(badDecrypt === undefined, 'decrypt with wrong key returns undefined');
 pass('decrypt with wrong key returns undefined');
 
 const envelope = wrapInDecryptionEnvelope('console.log("hi")', password);
-assert(typeof envelope === 'string' && envelope.includes('aes-256-cbc'), 'envelope contains AES');
+assert(typeof envelope === 'string' && envelope.includes('aes-256-gcm'), 'envelope contains AES');
 pass('wrapInDecryptionEnvelope produces valid envelope');
-
-// ─── integrity ────────────────────────────────────────────────────────────────
 
 console.log('\n[3/5] integrity');
 const { hashString, buildManifest, verifyManifest } = require('../src/core/integrity');
@@ -77,7 +65,6 @@ const vr = verifyManifest(tmpDir, manifest);
 assert(vr.valid === true && vr.tampered.length === 0, 'verifyManifest on untouched dir');
 pass('verifyManifest on clean dir returns valid');
 
-// Tamper a file
 fs.writeFileSync(path.join(tmpDir, 'a.js'), 'var x=999;');
 const vr2 = verifyManifest(tmpDir, manifest);
 assert(vr2.valid === false, 'verifyManifest detects modification');
@@ -85,8 +72,6 @@ assert(vr2.tampered.some(t => t.includes('a.js')), 'tampered list includes a.js'
 pass('verifyManifest detects tampered file');
 
 fs.removeSync(tmpDir);
-
-// ─── license ──────────────────────────────────────────────────────────────────
 
 console.log('\n[4/5] license');
 const { generateLicense, readLicense, verifyLicense } = require('../src/core/license');
@@ -124,8 +109,6 @@ pass('verifyLicense rejects wrong password');
 
 fs.removeSync(licTmpDir);
 
-// ─── junk-injector ────────────────────────────────────────────────────────────
-
 console.log('\n[5/5] junk-injector + obfuscator utils');
 const { generateJunkBlock, injectDecoyVars, buildJunkFile } = require('../src/core/junk-injector');
 const { stripComments, collapseToOneLine } = require('../src/core/obfuscator');
@@ -154,7 +137,5 @@ const oneline = collapseToOneLine('var a = 1;\nvar b = 2;\n  var c   =   3;');
 assert(!oneline.includes('\n'), 'collapseToOneLine removes newlines');
 pass('collapseToOneLine correct');
 
-// ─── Summary ──────────────────────────────────────────────────────────────────
-
 console.log('\n' + '─'.repeat(50));
-console.log('✔  All tests passed.\n');
+console.log('[ok]  All tests passed.\n');

@@ -1,5 +1,5 @@
 'use strict';
-// Simple manual test (no test runner dependency)
+
 const math = require('../lib/math');
 const assert = (cond, msg) => { if (!cond) throw new Error('FAIL: ' + msg); };
 

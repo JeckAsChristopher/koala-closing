@@ -1,10 +1,5 @@
 'use strict';
 
-/**
- * Returns a greeting string.
- * @param {string} name
- * @returns {string}
- */
 function greet(name) {
   const hour = new Date().getHours();
   let prefix;

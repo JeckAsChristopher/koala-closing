@@ -6,8 +6,6 @@ const crypto = require('crypto');
 const { encrypt, decrypt } = require('./encryption');
 const native               = require('./native-bridge');
 
-
-
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
   const hash = crypto.scryptSync(password, salt, 32, { N: 16384, r: 8, p: 1 });
@@ -71,7 +69,6 @@ function readLicense(licensePath, password) {
     return null;
   }
 }
-
 
 function readLicenseHeader(content) {
   const get = (key) => {
